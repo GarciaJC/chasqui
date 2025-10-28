@@ -1,0 +1,9 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "chasqui"
+  site-url: "https://GarciaJC.github.io/chasqui/"
+  description: "Computational chemistry workflow manager"
+  repo-branch: main
+  repo-url: "https://github.com/GarciaJC/chasqui/"
