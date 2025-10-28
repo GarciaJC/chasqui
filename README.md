@@ -47,14 +47,53 @@ or from [pypi](https://pypi.org/project/%7B%7Blib_name%7D%7D/)
 $ pip install {{lib_path}}
 ```
 
-### Documentation
+## About Chasqui
 
-Documentation can be found hosted on this GitHub
-[repository](%7B%7Bgit_url%7D%7D)’s
-[pages](https://%7B%7Buser%7D%7D.github.io/%7B%7Blib_name%7D%7D/).
-Additionally you can find package manager specific guidelines on
-[conda](https://anaconda.org/%7B%7Buser%7D%7D/%7B%7Blib_name%7D%7D) and
-[pypi](https://pypi.org/project/%7B%7Blib_name%7D%7D/) respectively.
+### The Need for Simple Workflow Systems
+
+Running computational materials calculations on HPC clusters often
+involves: - Submitting hundreds of jobs with varying parameters -
+Monitoring queue status across multiple runs - Managing data transfer
+between local and remote systems - Respecting queue policies (maximum
+jobs, walltime limits) - Dealing with authentication barriers (2FA, SSH
+keys)
+
+Existing workflow systems like AiiDA, FireWorks, or Snakemake are
+powerful but can be heavy—requiring databases, web servers, or complex
+configuration. For individual researchers or small groups, there’s a
+gap: **we need something lightweight, transparent, and easy to
+understand.**
+
+`chasqui` fills this gap by embracing simplicity: - **Single SQLite
+file** — no database server - **Plain bash scripts** — no daemons or
+background processes  
+- **SSH and PBS only** — standard HPC tools - **Literate programming** —
+readable notebooks, not opaque frameworks
+
+### Why “Chasqui”?
+
+The name comes from the **chasqui** (also *chaski*), the relay
+messengers of the Inca Empire. These runners formed a sophisticated
+communication network spanning thousands of kilometers across the Andes,
+carrying messages and small goods between administrative centers.
+
+Chasquis often carried **khipus** (*quipus*)—intricate systems of
+knotted strings that encoded numerical data, records, and possibly
+narratives. These weren’t just messages; they were **structured data**
+that could be interpreted by trained khipucamayuq (khipu keepers) at
+each station.
+
+### Design Philosophy
+
+1.  **Transparency** — You should understand what’s happening  
+2.  **Simplicity** — Fewer moving parts means less to break  
+3.  **Flexibility** — Work with your HPC environment, not against it  
+4.  **Literate** — Code as documentation, documentation as code
+
+`chasqui` isn’t trying to be the most feature-rich workflow system. It’s
+trying to be the one you can **debug at 2 AM when your calculations are
+due**, understand six months later when you return to a project, and
+modify when your HPC center changes queue policies.
 
 ## How to use
 
@@ -65,3 +104,12 @@ Fill me in please! Don’t forget code examples:
 ```
 
     2
+
+### Documentation
+
+Documentation can be found hosted on this GitHub
+\[repository\]\[https://github.com/GarciaJC/chasqui\]’s
+\[pages\]\[https://garciajc.github.io/chasqui/\]. Additionally you can
+find package manager specific guidelines on
+[conda](https://anaconda.org/%7B%7Buser%7D%7D/%7B%7Blib_name%7D%7D) and
+[pypi](https://pypi.org/project/%7B%7Blib_name%7D%7D/) respectively.
