@@ -5,3 +5,4 @@ website:
       - 00_core.ipynb
       - 01_sync.ipynb
       - 02_database.ipynb
+      - 03_ssh.ipynb
