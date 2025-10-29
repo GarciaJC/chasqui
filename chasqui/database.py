@@ -5,7 +5,7 @@
 # %% auto 0
 __all__ = ['SCHEMA_SQL', 'ChasquiDB']
 
-# %% ../02_database.ipynb 2
+# %% ../02_database.ipynb 3
 import sqlite3
 from pathlib import Path
 from datetime import datetime
@@ -15,7 +15,7 @@ import json
 import uuid
 from fastcore.basics import patch
 
-# %% ../02_database.ipynb 4
+# %% ../02_database.ipynb 5
 SCHEMA_SQL = """
 -- Jobs table: tracks all jobs through their lifecycle
 CREATE TABLE IF NOT EXISTS jobs (
@@ -70,7 +70,7 @@ INSERT OR IGNORE INTO schema_version (version, applied_at)
 VALUES (1, datetime('now'));
 """
 
-# %% ../02_database.ipynb 6
+# %% ../02_database.ipynb 7
 class ChasquiDB:
     """
     SQLite database manager for chasqui job tracking.
@@ -91,7 +91,7 @@ class ChasquiDB:
         self.db_path = Path(db_path).expanduser()
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
-# %% ../02_database.ipynb 8
+# %% ../02_database.ipynb 9
 @patch
 @contextmanager
 def _connect(self: ChasquiDB):
@@ -113,7 +113,7 @@ def init_db(self: ChasquiDB):
     with self._connect() as conn:
         conn.executescript(SCHEMA_SQL)
 
-# %% ../02_database.ipynb 10
+# %% ../02_database.ipynb 11
 @patch
 def create_job(
     self: ChasquiDB,
@@ -154,7 +154,7 @@ def create_job(
     
     return job_id
 
-# %% ../02_database.ipynb 12
+# %% ../02_database.ipynb 13
 @patch
 def update_state(
     self: ChasquiDB,
@@ -197,7 +197,7 @@ def update_state(
             values
         )
 
-# %% ../02_database.ipynb 14
+# %% ../02_database.ipynb 15
 @patch
 def get_job(self: ChasquiDB, job_id: str) -> Optional[Dict[str, Any]]:
     """Get job by ID."""
@@ -225,7 +225,7 @@ def get_all_jobs(self: ChasquiDB) -> List[Dict[str, Any]]:
         rows = conn.execute("SELECT * FROM jobs ORDER BY created_at").fetchall()
         return [dict(row) for row in rows]
 
-# %% ../02_database.ipynb 16
+# %% ../02_database.ipynb 17
 @patch
 def log_sync(
     self: ChasquiDB,
