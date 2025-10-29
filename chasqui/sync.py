@@ -5,13 +5,13 @@
 # %% auto 0
 __all__ = ['sync']
 
-# %% ../01_sync.ipynb 2
+# %% ../01_sync.ipynb 3
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 import json
 
-# %% ../01_sync.ipynb 4
+# %% ../01_sync.ipynb 5
 def sync(
     local_db_path: str = "~/.chasqui/jobs.db",
     remote_host: Optional[str] = None,

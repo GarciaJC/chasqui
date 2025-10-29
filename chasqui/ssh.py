@@ -5,7 +5,7 @@
 # %% auto 0
 __all__ = ['SSHConnection']
 
-# %% ../03_ssh.ipynb 2
+# %% ../03_ssh.ipynb 3
 from pathlib import Path
 from typing import Optional, List, Union, TYPE_CHECKING
 import warnings
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 from fastcore.basics import patch
 
-# %% ../03_ssh.ipynb 4
+# %% ../03_ssh.ipynb 5
 class SSHConnection:
     """
     Manage SSH connections to remote HPC systems.
@@ -98,7 +98,7 @@ class SSHConnection:
         self.sftp: Optional[paramiko.SFTPClient] = None
         self.jump_client: Optional[paramiko.SSHClient] = None
 
-# %% ../03_ssh.ipynb 6
+# %% ../03_ssh.ipynb 7
 @patch
 def _find_ssh_key(self: SSHConnection, key_path: Optional[str] = None) -> Path:
     """
@@ -137,7 +137,7 @@ def _find_ssh_key(self: SSHConnection, key_path: Optional[str] = None) -> Path:
         "Generate one with: ssh-keygen -t ed25519"
     )
 
-# %% ../03_ssh.ipynb 8
+# %% ../03_ssh.ipynb 9
 @patch
 def _load_ssh_config(self: SSHConnection) -> dict:
     """
@@ -182,7 +182,7 @@ def _load_ssh_config(self: SSHConnection) -> dict:
         warnings.warn(f"Could not parse SSH config for '{self.host}': {e}")
         return config
 
-# %% ../03_ssh.ipynb 10
+# %% ../03_ssh.ipynb 11
 @patch
 def __enter__(self: SSHConnection):
     """Establish SSH connection (with jump host if configured)."""
@@ -316,7 +316,7 @@ def __exit__(self: SSHConnection, exc_type, exc_val, exc_tb):
     if self.jump_client:
         self.jump_client.close()
 
-# %% ../03_ssh.ipynb 12
+# %% ../03_ssh.ipynb 13
 @patch
 def run(
     self: SSHConnection,
@@ -359,7 +359,7 @@ def run(
     
     return stdout_text
 
-# %% ../03_ssh.ipynb 14
+# %% ../03_ssh.ipynb 15
 @patch
 def upload(
     self: SSHConnection,
@@ -400,7 +400,7 @@ def upload(
     except Exception as e:
         raise RuntimeError(f"Failed to upload {local_path} to {remote_path}: {e}")
 
-# %% ../03_ssh.ipynb 16
+# %% ../03_ssh.ipynb 17
 @patch
 def download(
     self: SSHConnection,
@@ -437,7 +437,7 @@ def download(
     except Exception as e:
         raise RuntimeError(f"Failed to download {remote_path} to {local_path}: {e}")
 
-# %% ../03_ssh.ipynb 18
+# %% ../03_ssh.ipynb 19
 @patch
 def exists(self: SSHConnection, remote_path: str) -> bool:
     """
@@ -463,7 +463,7 @@ def exists(self: SSHConnection, remote_path: str) -> bool:
     except FileNotFoundError:
         return False
 
-# %% ../03_ssh.ipynb 20
+# %% ../03_ssh.ipynb 21
 @patch
 def list_dir(self: SSHConnection, remote_path: str) -> List[str]:
     """
