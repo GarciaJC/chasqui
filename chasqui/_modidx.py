@@ -34,4 +34,9 @@ d = { 'settings': { 'branch': 'main',
                              'chasqui.ssh.SSHConnection.list_dir': ('ssh.html#sshconnection.list_dir', 'chasqui/ssh.py'),
                              'chasqui.ssh.SSHConnection.run': ('ssh.html#sshconnection.run', 'chasqui/ssh.py'),
                              'chasqui.ssh.SSHConnection.upload': ('ssh.html#sshconnection.upload', 'chasqui/ssh.py')},
-            'chasqui.sync': {'chasqui.sync.sync': ('sync.html#sync', 'chasqui/sync.py')}}}
+            'chasqui.sync': {'chasqui.sync.sync': ('sync.html#sync', 'chasqui/sync.py')},
+            'chasqui.templates': { 'chasqui.templates.generate_pbs_script': ('templates.html#generate_pbs_script', 'chasqui/templates.py'),
+                                   'chasqui.templates.generate_pbs_script_from_job': ( 'templates.html#generate_pbs_script_from_job',
+                                                                                       'chasqui/templates.py'),
+                                   'chasqui.templates.validate_pbs_script': ( 'templates.html#validate_pbs_script',
+                                                                              'chasqui/templates.py')}}}

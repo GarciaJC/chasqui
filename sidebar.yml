@@ -6,3 +6,4 @@ website:
       - 01_sync.ipynb
       - 02_database.ipynb
       - 03_ssh.ipynb
+      - 04_templates.ipynb
