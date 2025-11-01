@@ -24,16 +24,22 @@ PBS_TEMPLATE = """#!/bin/bash
 # Job metadata for chasqui
 JOB_ID="$JOB_ID"
 CHASQUI_DIR="$CHASQUI_DIR"
+WORK_DIR="$WORK_DIR"
 
-cd $$PBS_O_WORKDIR
-NNODES=`wc -l < $$PBS_NODEFILE`
+# Change to work directory where VASP inputs are located
+cd $$WORK_DIR || { echo "ERROR: Cannot cd to $$WORK_DIR"; exit 1; }
+
 echo "======================================"
 echo "Job: $JOB_NAME"
 echo "Job ID: $$PBS_JOBID"
 echo "Chasqui ID: $$JOB_ID"
-echo "Nodes: $$NNODES"
+echo "Work Directory: $$WORK_DIR"
 echo "Started: $$(date)"
 echo "======================================"
+
+# Get node count from PBS
+NNODES=`wc -l < $$PBS_NODEFILE`
+echo "Nodes allocated: $$NNODES"
 
 # Environment setup
 ulimit -s unlimited
@@ -73,6 +79,7 @@ mkdir -p $$COMPLETED_DIR
 echo "$$STATUS" > $$COMPLETED_DIR/$${JOB_ID}.flag
 echo "$$PBS_JOBID" >> $$COMPLETED_DIR/$${JOB_ID}.flag
 echo "$$(date)" >> $$COMPLETED_DIR/$${JOB_ID}.flag
+echo "$$WORK_DIR" >> $$COMPLETED_DIR/$${JOB_ID}.flag
 
 # Move job script to completed
 SUBMITTED_DIR="$$CHASQUI_DIR/submitted"
@@ -80,7 +87,7 @@ mv $$SUBMITTED_DIR/$${JOB_ID}.sh $$COMPLETED_DIR/ 2>/dev/null
 
 # Log completion
 AGENT_LOG="$$CHASQUI_DIR/logs/agent.log"
-echo "$$(date -Iseconds) JOB_COMPLETE job=$$JOB_ID pbs=$$PBS_JOBID status=$$STATUS exit_code=$$EXIT_CODE" >> $$AGENT_LOG
+echo "$$(date -Iseconds) JOB_COMPLETE job=$$JOB_ID pbs=$$PBS_JOBID status=$$STATUS exit_code=$$EXIT_CODE work_dir=$$WORK_DIR" >> $$AGENT_LOG
 
 # Trigger agent to submit waiting jobs (with file lock)
 echo "Triggering agent to submit next jobs..."
@@ -93,6 +100,7 @@ exit $$EXIT_CODE
 # %% ../04_templates.ipynb 6
 def generate_pbs_script(
     job_id: str,
+    work_dir: str,
     job_name: Optional[str] = None,
     cores: int = 1,
     walltime: str = "48:00:00",
@@ -106,6 +114,7 @@ def generate_pbs_script(
     
     Args:
         job_id: Unique job identifier (UUID from database)
+        work_dir: Remote directory where VASP will run (contains POSCAR, INCAR, etc.)
         job_name: Human-readable job name (default: job_id)
         cores: Number of compute nodes to request (default: 1)
         walltime: Maximum runtime in HH:MM:SS format (default: "48:00:00")
@@ -120,16 +129,13 @@ def generate_pbs_script(
     Example:
         >>> script = generate_pbs_script(
         ...     job_id="abc-123-def",
+        ...     work_dir="~/scratch/vasp_jobs/abc-123-def",
         ...     job_name="Au_bulk_relax",
         ...     cores=2,
         ...     walltime="24:00:00",
         ...     project="MyProject",
         ...     vasp_version="vasp_std"
         ... )
-        >>> print(script[:50])
-        #!/bin/bash
-        
-        #PBS -N Au_bulk_relax
     """
     # Use job_id as name if not provided
     if job_name is None:
@@ -140,6 +146,7 @@ def generate_pbs_script(
     script = template.safe_substitute(
         JOB_ID=job_id,
         JOB_NAME=job_name,
+        WORK_DIR=work_dir,
         CORES=cores,
         TIME=walltime,
         PROJECT=project,
@@ -175,6 +182,10 @@ def generate_pbs_script_from_job(
         >>> db = ChasquiDB()
         >>> job = db.get_job("abc-123")
         >>> script = generate_pbs_script_from_job(job)
+        
+    Note:
+        If 'remote_work_dir' is not in vasp_config, it defaults to:
+        ~/scratch/vasp_jobs/<job_id>
     """
     import json
     
@@ -183,9 +194,16 @@ def generate_pbs_script_from_job(
     if job.get('vasp_config'):
         vasp_config = json.loads(job['vasp_config'])
     
+    # Determine work directory
+    # Priority: config > remote_path field > default convention
+    work_dir = vasp_config.get('remote_work_dir') or \
+               job.get('remote_path') or \
+               f"~/scratch/vasp_jobs/{job['job_id']}"
+    
     # Generate script with config parameters
     return generate_pbs_script(
         job_id=job['job_id'],
+        work_dir=work_dir,
         job_name=vasp_config.get('job_name'),
         cores=vasp_config.get('cores', 1),
         walltime=vasp_config.get('walltime', '48:00:00'),
@@ -214,6 +232,8 @@ def validate_pbs_script(script: str) -> bool:
         '#PBS -N',
         '#PBS -l select=',
         '#PBS -l walltime=',
+        'WORK_DIR=',
+        'cd $WORK_DIR',
         'module load vasp',
         'mpirun',
         'EXIT_CODE',
