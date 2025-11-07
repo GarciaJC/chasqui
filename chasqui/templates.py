@@ -26,6 +26,10 @@ JOB_ID="$JOB_ID"
 CHASQUI_DIR="$CHASQUI_DIR"
 WORK_DIR="$WORK_DIR"
 
+# Expand tildes (PBS doesn't do this automatically)
+CHASQUI_DIR="$${CHASQUI_DIR/#\\~/$${HOME}}"
+WORK_DIR="$${WORK_DIR/#\\~/$${HOME}}"
+
 # Change to work directory where VASP inputs are located
 cd $$WORK_DIR || { echo "ERROR: Cannot cd to $$WORK_DIR"; exit 1; }
 
