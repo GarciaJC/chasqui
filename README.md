@@ -57,45 +57,63 @@ trying to be the one you can **debug at 2 AM when your calculations are
 due**, understand six months later when you return to a project, and
 modify when your HPC center changes queue policies.
 
-## Usage
-
-### Installation
-
-Install latest from the GitHub
-[repository](https://github.com/GarciaJC/chasqui):
-
-``` sh
-$ pip install git+https://github.com/{{user}}/{{lib_name}}.git
+```` python
+## Install
+```sh
+pip install -e .
 ```
 
-or from
-[conda](https://anaconda.org/%7B%7Buser%7D%7D/%7B%7Blib_name%7D%7D)
+## Quick Start
 
-``` sh
-$ conda install -c {{user}} {{lib_path}}
+### Initialize Database
+```python
+from chasqui.database import ChasquiDB
+
+db = ChasquiDB("~/.chasqui/jobs.db")
+db.init_db()
 ```
 
-or from [pypi](https://pypi.org/project/%7B%7Blib_name%7D%7D/)
+### Create and Submit a Job
+```python
+# Create job (assuming VASP inputs in ~/my_vasp_job/)
+job_id = db.create_job(
+    local_path="~/my_vasp_job",
+    vasp_config={
+        "job_name": "my_calculation",
+        "cores": 2,
+        "walltime": "24:00:00",
+        "project": "YOUR_PROJECT_CODE",
+        "vasp_version": "vasp_std",
+        "remote_work_dir": "$HOME/scratch/my_calculation"
+    }
+)
 
-``` sh
-$ pip install {{lib_path}}
+# Queue for submission
+db.update_state(job_id, 'QUEUED_LOCAL')
+
+# Sync and submit
+from chasqui.sync import sync, SyncConfig
+
+config = SyncConfig(remote_host='bebop')
+result = sync(config)
+
+print(f"Uploaded: {result['uploaded']}, Submitted: {result['submitted']}")
+```
+
+## Workflow States
+
+Jobs progress through these states:
+```
+PREPARED → QUEUED_LOCAL → UPLOADED → SUBMITTED → RUNNING → COMPLETED/FAILED
 ```
 
 ## How to use
 
-Fill me in please! Don’t forget code examples:
+For detailed usage, see the [documentation](https://yourusername.github.io/chasqui/).
+````
 
-``` python
-1+1+1
-```
-
-    3
-
-### Documentation
-
-Documentation can be found hosted on this GitHub
-[repository](https://github.com/GarciaJC/chasqui)’s
-[pages](https://garciajc.github.io/chasqui/). Additionally you can find
-package manager specific guidelines on
-[conda](https://anaconda.org/%7B%7Buser%7D%7D/%7B%7Blib_name%7D%7D) and
-[pypi](https://pypi.org/project/%7B%7Blib_name%7D%7D/) respectively.
+    SyntaxError: invalid syntax (3283342529.py, line 2)
+      [36mCell[39m[36m [39m[32mIn[2][39m[32m, line 2[39m
+    [31m    [39m[31m```sh[39m
+        ^
+    [31mSyntaxError[39m[31m:[39m invalid syntax
