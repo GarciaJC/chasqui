@@ -57,16 +57,17 @@ trying to be the one you can **debug at 2 AM when your calculations are
 due**, understand six months later when you return to a project, and
 modify when your HPC center changes queue policies.
 
-```` python
 ## Install
-```sh
+
+``` sh
 pip install -e .
 ```
 
 ## Quick Start
 
 ### Initialize Database
-```python
+
+``` python
 from chasqui.database import ChasquiDB
 
 db = ChasquiDB("~/.chasqui/jobs.db")
@@ -74,7 +75,8 @@ db.init_db()
 ```
 
 ### Create and Submit a Job
-```python
+
+``` python
 # Create job (assuming VASP inputs in ~/my_vasp_job/)
 job_id = db.create_job(
     local_path="~/my_vasp_job",
@@ -103,17 +105,10 @@ print(f"Uploaded: {result['uploaded']}, Submitted: {result['submitted']}")
 ## Workflow States
 
 Jobs progress through these states:
-```
-PREPARED → QUEUED_LOCAL → UPLOADED → SUBMITTED → RUNNING → COMPLETED/FAILED
-```
+
+    PREPARED → QUEUED_LOCAL → UPLOADED → SUBMITTED → RUNNING → COMPLETED/FAILED
 
 ## How to use
 
-For detailed usage, see the [documentation](https://yourusername.github.io/chasqui/).
-````
-
-    SyntaxError: invalid syntax (3283342529.py, line 2)
-      [36mCell[39m[36m [39m[32mIn[2][39m[32m, line 2[39m
-    [31m    [39m[31m```sh[39m
-        ^
-    [31mSyntaxError[39m[31m:[39m invalid syntax
+For detailed usage, see the
+[documentation](https://garciajc.github.io/chasqui/).
