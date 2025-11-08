@@ -208,13 +208,9 @@ def sync(
         >>> print(f"Uploaded {result['uploaded']} jobs")
     """
 
-    print(f"[SYNC DEBUG] === SYNC STARTED ===")
-    print(f"[SYNC DEBUG] local_db_path parameter: {local_db_path}")
     
     from pathlib import Path
     resolved = Path(local_db_path).expanduser().resolve()
-    print(f"[SYNC DEBUG] Resolved to: {resolved}")
-    print(f"[SYNC DEBUG] File exists: {resolved.exists()}")
     
     # Use default config if not provided
     if config is None:
@@ -223,10 +219,8 @@ def sync(
     # Initialize database
     db = ChasquiDB(local_db_path)
 
-    print(f"[SYNC DEBUG] local_db_path parameter: {local_db_path}")
     from pathlib import Path
     resolved_path = Path(local_db_path).expanduser().resolve()
-    print(f"[SYNC DEBUG] Resolved to: {resolved_path}")
 
     # Ensure database is initialized (auto-init on first use)
     # Check if tables exist rather than trying a query
@@ -238,7 +232,6 @@ def sync(
             if cursor.fetchone() is None:
                 db.init_db()  # Only init if tables don't exist
     except Exception as e:
-        print(f"[SYNC DEBUG] Error checking database: {e}")
         db.init_db()
     
     # Stats to return
@@ -278,28 +271,19 @@ def sync(
             )
         
         # 1. UPLOAD PHASE: Get QUEUED_LOCAL jobs and upload them
-        print(f"[SYNC DEBUG] About to query database...")
-        print(f"[SYNC DEBUG] Database object: {db}")
-        print(f"[SYNC DEBUG] Database path: {db.db_path}")
         
         from pathlib import Path
         db_path_resolved = Path(db.db_path).expanduser().resolve()
-        print(f"[SYNC DEBUG] Database path resolved: {db_path_resolved}")
-        print(f"[SYNC DEBUG] Database file exists: {db_path_resolved.exists()}")
         
         if db_path_resolved.exists():
             import os
             size = os.path.getsize(db_path_resolved)
-            print(f"[SYNC DEBUG] Database file size: {size} bytes")
         
         queued_jobs = db.get_jobs_by_state('QUEUED_LOCAL')
         
-        print(f"[SYNC DEBUG] Queried QUEUED_LOCAL jobs: {len(queued_jobs)}")
         
         for job in queued_jobs:
-            print(f"[SYNC DEBUG] Loop iteration - processing job")  # ADD THIS
             job_id = job['job_id']
-            print(f"[SYNC DEBUG] Job ID: {job_id[:8]}")  # ADD THIS
             
             # Determine work directory
             if job.get('vasp_config'):
@@ -308,29 +292,22 @@ def sync(
             else:
                 work_dir = f"$HOME/scratch/vasp_jobs/{job_id}"
             
-            print(f"[SYNC DEBUG] Work dir (before expand): {work_dir}")  # ADD THIS
             
             # Expand work_dir
             work_dir = ssh.run(f'echo {work_dir}').strip()
             
-            print(f"[SYNC DEBUG] Work dir (after expand): {work_dir}")  # ADD THIS
-            print(f"[SYNC DEBUG] Entering try block...")  # ADD THIS
             
             try:
                 # Upload VASP inputs
-                print(f"[SYNC DEBUG] Calling _upload_vasp_inputs...")  # ADD THIS
                 _upload_vasp_inputs(ssh, job, work_dir)
                 
-                print(f"[SYNC DEBUG] Calling _upload_pbs_script...")  # ADD THIS
                 # Generate and upload PBS script
                 _upload_pbs_script(ssh, job, work_dir, waiting_dir)
                 
-                print(f"[SYNC DEBUG] Updating database...")  # ADD THIS
                 # Update database
                 db.update_state(job_id, 'UPLOADED', remote_path=work_dir)
                 stats['uploaded'] += 1
                 
-                print(f"[SYNC DEBUG] Job uploaded successfully!")  # ADD THIS
                 
             except Exception as e:
                 print(f"Error uploading job {job_id}: {e}")
@@ -338,7 +315,6 @@ def sync(
                 traceback.print_exc()  # ADD THIS for full traceback
                 continue
         
-        print(f"[SYNC DEBUG] Upload loop completed. Stats: {stats}")  # ADD THIS
         
         # 2. TRIGGER AGENT: Submit waiting jobs
         if stats['uploaded'] > 0 or db.get_jobs_by_state('UPLOADED'):
