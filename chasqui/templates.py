@@ -70,10 +70,10 @@ echo "======================================"
 # ============================================
 
 if [ $$EXIT_CODE -eq 0 ]; then
-    STATUS="DONE"
+    STATUS="COMPLETED"
     echo "✓ Job completed successfully"
 else
-    STATUS="FAIL"
+    STATUS="FAILED"
     echo "✗ Job failed with exit code $$EXIT_CODE"
 fi
 
