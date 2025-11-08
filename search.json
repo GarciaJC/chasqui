@@ -1,0 +1,632 @@
+[
+  {
+    "objectID": "core.html",
+    "href": "core.html",
+    "title": "core",
+    "section": "",
+    "text": "source\n\nfoo\n\n foo ()",
+    "crumbs": [
+      "core"
+    ]
+  },
+  {
+    "objectID": "database.html",
+    "href": "database.html",
+    "title": "Database Layer",
+    "section": "",
+    "text": "This module manages the local SQLite database that tracks all jobs through their lifecycle.",
+    "crumbs": [
+      "Database Layer"
+    ]
+  },
+  {
+    "objectID": "database.html#design-principles",
+    "href": "database.html#design-principles",
+    "title": "Database Layer",
+    "section": "Design Principles",
+    "text": "Design Principles\n\nSingle source of truth: All job state lives here\nImmutable history: State transitions are logged, never overwritten\nSimple schema: Lightweight, just what we need\nTransaction safety: All writes are atomic",
+    "crumbs": [
+      "Database Layer"
+    ]
+  },
+  {
+    "objectID": "database.html#job-state-machine",
+    "href": "database.html#job-state-machine",
+    "title": "Database Layer",
+    "section": "Job State Machine",
+    "text": "Job State Machine\nPREPARED → QUEUED_LOCAL → UPLOADED → SUBMITTED → RUNNING → COMPLETED\n                                                         ↘ FAILED",
+    "crumbs": [
+      "Database Layer"
+    ]
+  },
+  {
+    "objectID": "database.html#schema",
+    "href": "database.html#schema",
+    "title": "Database Layer",
+    "section": "Schema",
+    "text": "Schema\njobs table: - Tracks individual jobs through their lifecycle - Primary key: job_id (UUID) - State field tracks current status - Timestamps for all transitions\nsync_log table: - Audit trail of all sync operations - Helps with debugging and recovery",
+    "crumbs": [
+      "Database Layer"
+    ]
+  },
+  {
+    "objectID": "database.html#database-schema",
+    "href": "database.html#database-schema",
+    "title": "Database Layer",
+    "section": "Database Schema",
+    "text": "Database Schema\nWe keep it minimal but extensible.",
+    "crumbs": [
+      "Database Layer"
+    ]
+  },
+  {
+    "objectID": "database.html#base-class-definition",
+    "href": "database.html#base-class-definition",
+    "title": "Database Layer",
+    "section": "Base class definition",
+    "text": "Base class definition\n\nsource\n\nChasquiDB\n\n ChasquiDB (db_path:str='~/.chasqui/jobs.db')\n\n*SQLite database manager for chasqui job tracking.\nExample: &gt;&gt;&gt; db = ChasquiDB(“~/.chasqui/jobs.db”) &gt;&gt;&gt; db.init_db() &gt;&gt;&gt; job_id = db.create_job(local_path=“/path/to/job”)*",
+    "crumbs": [
+      "Database Layer"
+    ]
+  },
+  {
+    "objectID": "database.html#connection-management",
+    "href": "database.html#connection-management",
+    "title": "Database Layer",
+    "section": "Connection Management",
+    "text": "Connection Management\nWe use a context manager to ensure database connections are properly handled. This pattern ensures commits happen on success and rollbacks on errors.\n\nsource\n\nChasquiDB.init_db\n\n ChasquiDB.init_db ()\n\nInitialize database schema.",
+    "crumbs": [
+      "Database Layer"
+    ]
+  },
+  {
+    "objectID": "database.html#creating-jobs",
+    "href": "database.html#creating-jobs",
+    "title": "Database Layer",
+    "section": "Creating Jobs",
+    "text": "Creating Jobs\nNew jobs start in the PREPARED state. They contain: - A unique UUID identifier - Path to local VASP inputs - Optional configuration parameters (stored as JSON)\n\nsource\n\nChasquiDB.create_job\n\n ChasquiDB.create_job (local_path:str,\n                       vasp_config:Optional[Dict[str,Any]]=None)\n\n*Create a new job in PREPARED state.\nArgs: local_path: Path to local directory with VASP inputs vasp_config: Dictionary with VASP parameters (optional)\nReturns: job_id: UUID for the created job\nExample: &gt;&gt;&gt; db = ChasquiDB() &gt;&gt;&gt; job_id = db.create_job( … local_path=“/scratch/vasp_job_001”, … vasp_config={“encut”: 500, “kpoints”: [4,4,4]} … )*",
+    "crumbs": [
+      "Database Layer"
+    ]
+  },
+  {
+    "objectID": "database.html#state-transitions",
+    "href": "database.html#state-transitions",
+    "title": "Database Layer",
+    "section": "State Transitions",
+    "text": "State Transitions\nJobs move through states as they progress. Each transition: - Updates the state field - Records a timestamp - Can update additional fields (like PBS ID)\nThe state machine enforces valid transitions through the CHECK constraint.\n\nsource\n\nChasquiDB.update_state\n\n ChasquiDB.update_state (job_id:str, new_state:str, **kwargs)\n\n*Update job state and related fields.\nArgs: job_id: Job UUID new_state: New state value **kwargs: Additional fields to update (e.g., pbs_id, remote_path)\nExample: &gt;&gt;&gt; db.update_state(“abc-123”, “SUBMITTED”, pbs_id=“12345678”)*",
+    "crumbs": [
+      "Database Layer"
+    ]
+  },
+  {
+    "objectID": "database.html#querying-jobs",
+    "href": "database.html#querying-jobs",
+    "title": "Database Layer",
+    "section": "Querying Jobs",
+    "text": "Querying Jobs\nCommon query patterns for retrieving job information.\n\nsource\n\nChasquiDB.get_all_jobs\n\n ChasquiDB.get_all_jobs ()\n\nGet all jobs.\n\nsource\n\n\nChasquiDB.get_jobs_by_state\n\n ChasquiDB.get_jobs_by_state (state:str)\n\nGet all jobs in a given state.\n\nsource\n\n\nChasquiDB.get_job\n\n ChasquiDB.get_job (job_id:str)\n\nGet job by ID.",
+    "crumbs": [
+      "Database Layer"
+    ]
+  },
+  {
+    "objectID": "database.html#sync-audit-log",
+    "href": "database.html#sync-audit-log",
+    "title": "Database Layer",
+    "section": "Sync Audit Log",
+    "text": "Sync Audit Log\nTrack all synchronization operations for debugging and monitoring.\n\nsource\n\nChasquiDB.get_last_sync\n\n ChasquiDB.get_last_sync ()\n\nGet the most recent sync operation.\n\nsource\n\n\nChasquiDB.log_sync\n\n ChasquiDB.log_sync (uploaded:int=0, submitted:int=0, completed:int=0,\n                     failed:int=0, details:Optional[Dict[str,Any]]=None)\n\n*Record a sync operation.\nArgs: uploaded: Number of jobs uploaded submitted: Number of jobs submitted to PBS completed: Number of jobs completed failed: Number of jobs failed details: Additional information (optional)*",
+    "crumbs": [
+      "Database Layer"
+    ]
+  },
+  {
+    "objectID": "database.html#tests",
+    "href": "database.html#tests",
+    "title": "Database Layer",
+    "section": "Tests",
+    "text": "Tests\nLet’s verify the database works correctly.",
+    "crumbs": [
+      "Database Layer"
+    ]
+  },
+  {
+    "objectID": "templates.html",
+    "href": "templates.html",
+    "title": "PBS Job Templates",
+    "section": "",
+    "text": "This module creates PBS scripts that: - Execute VASP calculations with proper environment setup - Handle job completion (success/failure) - Write completion flags for status tracking - Trigger the remote agent to submit waiting jobs - Log execution details",
+    "crumbs": [
+      "PBS Job Templates"
+    ]
+  },
+  {
+    "objectID": "templates.html#template-structure",
+    "href": "templates.html#template-structure",
+    "title": "PBS Job Templates",
+    "section": "Template Structure",
+    "text": "Template Structure\nEach generated PBS script includes:\n\nPBS Directives - Resource allocation (#PBS -l, -A, etc.)\nEnvironment Setup - Module loads, ulimit, OMP settings\nVASP Execution - MPI run with proper parameters\nCompletion Handler - Always runs, even on failure\nAgent Trigger - Starts next job submission cycle",
+    "crumbs": [
+      "PBS Job Templates"
+    ]
+  },
+  {
+    "objectID": "templates.html#integration-with-workflow",
+    "href": "templates.html#integration-with-workflow",
+    "title": "PBS Job Templates",
+    "section": "Integration with Workflow",
+    "text": "Integration with Workflow\nJob Script Template\n       ↓\n   PBS Queue\n       ↓\n  VASP Runs\n       ↓\nCompletion Handler → Writes flag → Triggers agent.sh\n                                          ↓\n                                   Submits next jobs",
+    "crumbs": [
+      "PBS Job Templates"
+    ]
+  },
+  {
+    "objectID": "templates.html#pbs-script-template",
+    "href": "templates.html#pbs-script-template",
+    "title": "PBS Job Templates",
+    "section": "PBS Script Template",
+    "text": "PBS Script Template\nBased on regular script with enhancements for workflow automation.\n\nsource\n\ngenerate_pbs_script\n\n generate_pbs_script (job_id:str, work_dir:str,\n                      job_name:Optional[str]=None, cores:int=1,\n                      walltime:str='48:00:00', project:str='AARC1',\n                      vasp_version:str='vasp_gam',\n                      chasqui_remote_dir:str='~/chasqui_remote',\n                      output_path:Optional[str]=None)\n\n*Generate PBS submission script for VASP job.\nArgs: job_id: Unique job identifier (UUID from database) work_dir: Remote directory where VASP will run (contains POSCAR, INCAR, etc.) job_name: Human-readable job name (default: job_id) cores: Number of compute nodes to request (default: 1) walltime: Maximum runtime in HH:MM:SS format (default: “48:00:00”) project: PBS account/project code (default: “AARC1”) vasp_version: VASP executable name (default: “vasp_gam”) chasqui_remote_dir: Remote chasqui directory (default: “~/chasqui_remote”) output_path: If provided, write script to this file\nReturns: PBS script content as string\nExample: &gt;&gt;&gt; script = generate_pbs_script( … job_id=“abc-123-def”, … work_dir=“~/scratch/vasp_jobs/abc-123-def”, … job_name=“Au_bulk_relax”, … cores=2, … walltime=“24:00:00”, … project=“MyProject”, … vasp_version=“vasp_std” … )*",
+    "crumbs": [
+      "PBS Job Templates"
+    ]
+  },
+  {
+    "objectID": "templates.html#job-specific-script-generation",
+    "href": "templates.html#job-specific-script-generation",
+    "title": "PBS Job Templates",
+    "section": "Job-Specific Script Generation",
+    "text": "Job-Specific Script Generation\nGenerate script directly from database job entry.\n\nsource\n\ngenerate_pbs_script_from_job\n\n generate_pbs_script_from_job (job:Dict[str,Any],\n                               output_path:Optional[str]=None)\n\n*Generate PBS script from database job entry.\nArgs: job: Job dictionary from ChasquiDB.get_job() output_path: Optional path to write script\nReturns: PBS script content as string\nExample: &gt;&gt;&gt; from chasqui.database import ChasquiDB &gt;&gt;&gt; db = ChasquiDB() &gt;&gt;&gt; job = db.get_job(“abc-123”) &gt;&gt;&gt; script = generate_pbs_script_from_job(job)\nNote: If ‘remote_work_dir’ is not in vasp_config, it defaults to: ~/scratch/vasp_jobs/*",
+    "crumbs": [
+      "PBS Job Templates"
+    ]
+  },
+  {
+    "objectID": "templates.html#script-validation",
+    "href": "templates.html#script-validation",
+    "title": "PBS Job Templates",
+    "section": "Script Validation",
+    "text": "Script Validation\nHelper to validate generated scripts.\n\nsource\n\nvalidate_pbs_script\n\n validate_pbs_script (script:str)\n\n*Validate that PBS script has required elements.\nArgs: script: PBS script content\nReturns: True if script looks valid\nRaises: ValueError: If script is missing required elements*",
+    "crumbs": [
+      "PBS Job Templates"
+    ]
+  },
+  {
+    "objectID": "templates.html#tests",
+    "href": "templates.html#tests",
+    "title": "PBS Job Templates",
+    "section": "Tests",
+    "text": "Tests\nVerify script generation works correctly.",
+    "crumbs": [
+      "PBS Job Templates"
+    ]
+  },
+  {
+    "objectID": "templates.html#usage-examples",
+    "href": "templates.html#usage-examples",
+    "title": "PBS Job Templates",
+    "section": "Usage Examples",
+    "text": "Usage Examples\n\nBasic Usage with Work Directory\nfrom chasqui.templates import generate_pbs_script\n\n# Generate script - work_dir is REQUIRED\nscript = generate_pbs_script(\n    job_id=\"abc-123-def-456\",\n    work_dir=\"~/scratch/vasp_jobs/abc-123-def-456\",  # Where VASP inputs are\n    job_name=\"Au_bulk_optimization\",\n    cores=2,\n    walltime=\"24:00:00\",\n    project=\"MyResearchProject\",\n    vasp_version=\"vasp_std\"\n)\n\n# Write to file\nwith open(\"job.sh\", \"w\") as f:\n    f.write(script)\n\n\nWith Database Integration\nfrom chasqui.database import ChasquiDB\nfrom chasqui.templates import generate_pbs_script_from_job\n\n# Create job in database with remote work directory\ndb = ChasquiDB()\njob_id = db.create_job(\n    local_path=\"/path/to/vasp\",\n    vasp_config={\n        \"job_name\": \"Si_bandstructure\",\n        \"cores\": 4,\n        \"walltime\": \"12:00:00\",\n        \"project\": \"MATERIALS2024\",\n        \"vasp_version\": \"vasp_std\",\n        \"remote_work_dir\": f\"~/scratch/vasp_jobs/{job_id}\"  # Explicit work dir\n    }\n)\n\n# Generate script from job\njob = db.get_job(job_id)\nscript = generate_pbs_script_from_job(\n    job,\n    output_path=f\"jobs/{job_id}.sh\"\n)\n\n\nDefault Work Directory Convention\n# If you don't specify remote_work_dir in vasp_config,\n# it defaults to: ~/scratch/vasp_jobs/&lt;job_id&gt;\n\ndb = ChasquiDB()\njob_id = db.create_job(\n    local_path=\"/path/to/vasp\",\n    vasp_config={\n        \"cores\": 2,\n        # No remote_work_dir specified\n    }\n)\n\njob = db.get_job(job_id)\nscript = generate_pbs_script_from_job(job)\n# Uses: ~/scratch/vasp_jobs/&lt;job_id&gt;\n\n\nDirectory Structure on Remote\nWhen you use this template, the remote structure looks like:\n~/chasqui_remote/              # Management files\n├── waiting/abc-123.sh         # PBS script\n├── submitted/\n└── completed/\n\n~/scratch/vasp_jobs/           # Work directories\n└── abc-123-def-456/           # VASP runs here\n    ├── POSCAR                 # Input (uploaded by sync)\n    ├── INCAR                  # Input (uploaded by sync)\n    ├── KPOINTS                # Input (uploaded by sync)\n    ├── POTCAR                 # Input (uploaded by sync)\n    ├── OUTCAR                 # Output (created by VASP)\n    ├── CONTCAR                # Output (created by VASP)\n    └── abc-123.out            # PBS output\n\nfrom chasqui.templates import generate_pbs_script\n\n# Test 1: Generate script with explicit work directory\nprint(\"=\" * 60)\nprint(\"Test 1: Basic script generation with work_dir\")\nprint(\"=\" * 60)\n\nscript = generate_pbs_script(\n    job_id=\"test-001\",\n    work_dir=\"~/scratch/vasp_jobs/test-001\",\n    job_name=\"Au_bulk_test\",\n    cores=2,\n    walltime=\"12:00:00\",\n    project=\"AARC1\",\n    vasp_version=\"vasp_std\"\n)\n\n# Show key parts\nlines = script.split('\\n')\nprint(f\"\\nTotal lines: {len(lines)}\")\nprint(\"\\n--- First 30 lines ---\")\nprint('\\n'.join(lines[:30]))\n\nprint(\"\\n--- Work directory setup (lines 15-25) ---\")\nprint('\\n'.join(lines[15:25]))\n\nprint(\"\\n--- Last 10 lines ---\")\nprint('\\n'.join(lines[-10:]))\n\n# Test 2: Verify work_dir is in the script\nprint(\"\\n\" + \"=\" * 60)\nprint(\"Test 2: Verify work_dir elements\")\nprint(\"=\" * 60)\n\nchecks = {\n    'WORK_DIR variable set': 'WORK_DIR=\"~/scratch/vasp_jobs/test-001\"' in script,\n    'cd to WORK_DIR': 'cd $WORK_DIR' in script,\n    'Error handling for cd': '{ echo \"ERROR: Cannot cd to' in script,\n    'Work dir in completion flag': 'echo \"$$WORK_DIR\"' in script,\n    'Work dir in log': 'work_dir=$$WORK_DIR' in script,\n}\n\nfor check, result in checks.items():\n    status = \"✓\" if result else \"✗\"\n    print(f\"{status} {check}: {result}\")\n\n# Test 3: Generate from job dictionary\nprint(\"\\n\" + \"=\" * 60)\nprint(\"Test 3: Generate from job dict with work_dir\")\nprint(\"=\" * 60)\n\ntest_job = {\n    'job_id': 'abc-123-def-456',\n    'vasp_config': '''{\n        \"job_name\": \"Si_optimization\",\n        \"cores\": 4,\n        \"walltime\": \"24:00:00\",\n        \"project\": \"MatSci\",\n        \"remote_work_dir\": \"~/scratch/vasp_jobs/Si_opt_001\"\n    }'''\n}\n\nfrom chasqui.templates import generate_pbs_script_from_job\nscript2 = generate_pbs_script_from_job(test_job)\n\n# Check that custom work_dir is used\nassert \"Si_opt_001\" in script2, \"Custom work_dir not used!\"\nassert \"Si_optimization\" in script2, \"Job name not used!\"\nassert \"select=4:\" in script2, \"Cores not set!\"\nprint(\"✓ Custom work_dir from config: ~/scratch/vasp_jobs/Si_opt_001\")\nprint(\"✓ Job name: Si_optimization\")\nprint(\"✓ Cores: 4\")\n\n# Test 4: Default work_dir convention\nprint(\"\\n\" + \"=\" * 60)\nprint(\"Test 4: Default work_dir convention\")\nprint(\"=\" * 60)\n\ntest_job_default = {\n    'job_id': 'xyz-789-default',\n    'vasp_config': '{\"cores\": 2}'  # No remote_work_dir specified\n}\n\nscript3 = generate_pbs_script_from_job(test_job_default)\nexpected_workdir = \"~/scratch/vasp_jobs/xyz-789-default\"\nassert expected_workdir in script3, \"Default work_dir convention not applied!\"\nprint(f\"✓ Default work_dir applied: {expected_workdir}\")\n\n# Test 5: Write to file\nprint(\"\\n\" + \"=\" * 60)\nprint(\"Test 5: Write to file\")\nprint(\"=\" * 60)\n\nimport tempfile\nimport os\n\nwith tempfile.NamedTemporaryFile(mode='w', suffix='.sh', delete=False) as f:\n    temp_path = f.name\n\ntry:\n    script4 = generate_pbs_script(\n        job_id=\"file-test-999\",\n        work_dir=\"~/scratch/vasp_jobs/file-test-999\",\n        job_name=\"file_test\",\n        output_path=temp_path\n    )\n    \n    print(f\"✓ Script written to: {temp_path}\")\n    \n    # Read it back\n    with open(temp_path) as f:\n        content = f.read()\n    \n    print(f\"✓ File size: {len(content)} bytes\")\n    print(f\"✓ Contains work_dir: {'WORK_DIR=' in content}\")\n    \nfinally:\n    os.unlink(temp_path)\n    print(\"✓ Temp file cleaned up\")\n\nprint(\"\\n\" + \"=\" * 60)\nprint(\"🎉 ALL TESTS PASSED!\")\nprint(\"=\" * 60)\n\n============================================================\nTest 1: Basic script generation with work_dir\n============================================================\n\nTotal lines: 88\n\n--- First 30 lines ---\n#!/bin/bash\n\n#PBS -N Au_bulk_test\n#PBS -l select=2:ncpus=36:mpiprocs=36\n#PBS -A AARC1\n#PBS -l walltime=12:00:00\n#PBS -j oe\n#PBS -o Au_bulk_test.out\n\n# Job metadata for chasqui\nJOB_ID=\"test-001\"\nCHASQUI_DIR=\"~/chasqui_remote\"\nWORK_DIR=\"~/scratch/vasp_jobs/test-001\"\n\n# Expand tildes (PBS doesn't do this automatically)\nCHASQUI_DIR=\"${CHASQUI_DIR/#\\~/${HOME}}\"\nWORK_DIR=\"${WORK_DIR/#\\~/${HOME}}\"\n\n# Change to work directory where VASP inputs are located\ncd $WORK_DIR || { echo \"ERROR: Cannot cd to $WORK_DIR\"; exit 1; }\n\necho \"======================================\"\necho \"Job: Au_bulk_test\"\necho \"Job ID: $PBS_JOBID\"\necho \"Chasqui ID: $JOB_ID\"\necho \"Work Directory: $WORK_DIR\"\necho \"Started: $(date)\"\necho \"======================================\"\n\n# Get node count from PBS\n\n--- Work directory setup (lines 15-25) ---\nCHASQUI_DIR=\"${CHASQUI_DIR/#\\~/${HOME}}\"\nWORK_DIR=\"${WORK_DIR/#\\~/${HOME}}\"\n\n# Change to work directory where VASP inputs are located\ncd $WORK_DIR || { echo \"ERROR: Cannot cd to $WORK_DIR\"; exit 1; }\n\necho \"======================================\"\necho \"Job: Au_bulk_test\"\necho \"Job ID: $PBS_JOBID\"\necho \"Chasqui ID: $JOB_ID\"\n\n--- Last 10 lines ---\nAGENT_LOG=\"$CHASQUI_DIR/logs/agent.log\"\necho \"$(date -Iseconds) JOB_COMPLETE job=$JOB_ID pbs=$PBS_JOBID status=$STATUS exit_code=$EXIT_CODE work_dir=$WORK_DIR\" &gt;&gt; $AGENT_LOG\n\n# Trigger agent to submit waiting jobs (with file lock)\necho \"Triggering agent to submit next jobs...\"\nflock -n $CHASQUI_DIR/agent.lock -c \"bash $CHASQUI_DIR/agent.sh\" &\n\n# Exit with original VASP exit code\nexit $EXIT_CODE\n\n\n============================================================\nTest 2: Verify work_dir elements\n============================================================\n✓ WORK_DIR variable set: True\n✓ cd to WORK_DIR: True\n✓ Error handling for cd: True\n✗ Work dir in completion flag: False\n✗ Work dir in log: False\n\n============================================================\nTest 3: Generate from job dict with work_dir\n============================================================\n✓ Custom work_dir from config: ~/scratch/vasp_jobs/Si_opt_001\n✓ Job name: Si_optimization\n✓ Cores: 4\n\n============================================================\nTest 4: Default work_dir convention\n============================================================\n✓ Default work_dir applied: ~/scratch/vasp_jobs/xyz-789-default\n\n============================================================\nTest 5: Write to file\n============================================================\n✓ Script written to: /tmp/tmpkmcdj08d.sh\n✓ File size: 2359 bytes\n✓ Contains work_dir: True\n✓ Temp file cleaned up\n\n============================================================\n🎉 ALL TESTS PASSED!\n============================================================",
+    "crumbs": [
+      "PBS Job Templates"
+    ]
+  },
+  {
+    "objectID": "sync.html",
+    "href": "sync.html",
+    "title": "Sync Operations",
+    "section": "",
+    "text": "This module handles all communication between local and remote systems:",
+    "crumbs": [
+      "Sync Operations"
+    ]
+  },
+  {
+    "objectID": "sync.html#key-design-decisions",
+    "href": "sync.html#key-design-decisions",
+    "title": "Sync Operations",
+    "section": "Key Design Decisions",
+    "text": "Key Design Decisions\nManual 2FA Requirement: All remote operations happen in a single SSH session to minimize authentication overhead.\nLightweight Remote State: Remote side uses append-only log files rather than a database for simplicity and robustness.\nSelf-Perpetuating Queue: Completed PBS jobs trigger the agent to submit waiting jobs, eliminating need for cron.",
+    "crumbs": [
+      "Sync Operations"
+    ]
+  },
+  {
+    "objectID": "sync.html#workflow",
+    "href": "sync.html#workflow",
+    "title": "Sync Operations",
+    "section": "Workflow",
+    "text": "Workflow\n1. Get QUEUED_LOCAL jobs from database\n2. Upload VASP inputs to remote work directories\n3. Generate and upload PBS scripts to waiting/\n4. Trigger agent to submit jobs\n5. Parse agent log to see what was submitted\n6. Update local database with submission status\n7. Check for completed jobs (flags)\n8. Update database and optionally download results",
+    "crumbs": [
+      "Sync Operations"
+    ]
+  },
+  {
+    "objectID": "sync.html#architecture",
+    "href": "sync.html#architecture",
+    "title": "Sync Operations",
+    "section": "Architecture",
+    "text": "Architecture\nThe sync operation follows this flow:\nLocal DB → SSH Connection → Remote System\n   ↓                            ↓\nQUEUED_LOCAL              waiting/*.sh\n   ↓                            ↓\nUPLOADED                  agent.sh (triggered)\n   ↓                            ↓\nSUBMITTED ←── agent.log ←── PBS Queue\n   ↓\nCOMPLETED\nThe sync() function orchestrates all operations in a single SSH session.",
+    "crumbs": [
+      "Sync Operations"
+    ]
+  },
+  {
+    "objectID": "sync.html#sync-configuration",
+    "href": "sync.html#sync-configuration",
+    "title": "Sync Operations",
+    "section": "Sync Configuration",
+    "text": "Sync Configuration\nStore sync parameters in a configuration object.\n\nsource\n\nSyncConfig\n\n SyncConfig (remote_host:str='bebop',\n             chasqui_remote_dir:str='$HOME/chasqui_remote',\n             max_queued:int=40, max_running:int=30,\n             auto_deploy_agent:bool=True, download_results:bool=False)\n\n*Configuration for sync operations.\nExample: &gt;&gt;&gt; config = SyncConfig( … remote_host=‘bebop’, … chasqui_remote_dir=‘$HOME/chasqui_remote’, … max_queued=40, … max_running=30 … )*",
+    "crumbs": [
+      "Sync Operations"
+    ]
+  },
+  {
+    "objectID": "sync.html#helper-functions",
+    "href": "sync.html#helper-functions",
+    "title": "Sync Operations",
+    "section": "Helper Functions",
+    "text": "Helper Functions\nInternal functions for sync operations.",
+    "crumbs": [
+      "Sync Operations"
+    ]
+  },
+  {
+    "objectID": "sync.html#main-sync-function",
+    "href": "sync.html#main-sync-function",
+    "title": "Sync Operations",
+    "section": "Main Sync Function",
+    "text": "Main Sync Function\nThe orchestrator that performs all sync operations.\n\nsource\n\nsync\n\n sync (config:Optional[__main__.SyncConfig]=None,\n       local_db_path:str='~/.chasqui/jobs.db', dry_run:bool=False)\n\n*Synchronize local and remote job queues.\nThis is the main orchestration function that: 1. Uploads queued jobs to remote 2. Triggers remote agent 3. Syncs job status back to local DB 4. Downloads completed results (optional)\nArgs: config: SyncConfig object (if None, uses defaults) local_db_path: Path to local SQLite database dry_run: If True, show what would happen without executing\nReturns: Dictionary with sync statistics: { ‘uploaded’: 5, ‘submitted’: 3, ‘completed’: 2, ‘failed’: 0, ‘timestamp’: ‘2025-10-28T10:30:00Z’ }\nExample: &gt;&gt;&gt; from chasqui.sync import sync, SyncConfig &gt;&gt;&gt; config = SyncConfig(remote_host=‘bebop’) &gt;&gt;&gt; result = sync(config) &gt;&gt;&gt; print(f”Uploaded {result[‘uploaded’]} jobs”)*",
+    "crumbs": [
+      "Sync Operations"
+    ]
+  },
+  {
+    "objectID": "sync.html#convenience-functions",
+    "href": "sync.html#convenience-functions",
+    "title": "Sync Operations",
+    "section": "Convenience Functions",
+    "text": "Convenience Functions\nSimplified interfaces for common operations.\n\nsource\n\nquick_sync\n\n quick_sync (remote_host:str='bebop')\n\n*Quick sync with default settings.\nArgs: remote_host: SSH host to connect to\nReturns: Sync statistics\nExample: &gt;&gt;&gt; from chasqui.sync import quick_sync &gt;&gt;&gt; result = quick_sync(‘bebop’) &gt;&gt;&gt; print(result)*",
+    "crumbs": [
+      "Sync Operations"
+    ]
+  },
+  {
+    "objectID": "sync.html#tests",
+    "href": "sync.html#tests",
+    "title": "Sync Operations",
+    "section": "Tests",
+    "text": "Tests\nBasic functionality tests.",
+    "crumbs": [
+      "Sync Operations"
+    ]
+  },
+  {
+    "objectID": "sync.html#usage-examples",
+    "href": "sync.html#usage-examples",
+    "title": "Sync Operations",
+    "section": "Usage Examples",
+    "text": "Usage Examples\n\nBasic Sync\nfrom chasqui.sync import sync, SyncConfig\n\n# Configure\nconfig = SyncConfig(\n    remote_host='bebop',\n    max_queued=40,\n    max_running=30\n)\n\n# Sync\nresult = sync(config)\n\nprint(f\"Uploaded: {result['uploaded']}\")\nprint(f\"Submitted: {result['submitted']}\")\nprint(f\"Completed: {result['completed']}\")\nprint(f\"Failed: {result['failed']}\")\n\n\nQuick Sync (with defaults)\nfrom chasqui.sync import quick_sync\n\nresult = quick_sync('bebop')\nprint(result)\n\n\nComplete Workflow Example\nfrom chasqui.database import ChasquiDB\nfrom chasqui.sync import sync, SyncConfig\n\n# 1. Create jobs locally\ndb = ChasquiDB()\ndb.init_db()\n\njob_id = db.create_job(\n    local_path=\"/path/to/vasp_job\",\n    vasp_config={\n        \"job_name\": \"Au_relax\",\n        \"cores\": 2,\n        \"walltime\": \"24:00:00\",\n        \"project\": \"AARC1\"\n    }\n)\n\n# 2. Queue for submission\ndb.update_state(job_id, 'QUEUED_LOCAL')\n\n# 3. Sync (uploads, submits, checks status)\nconfig = SyncConfig(remote_host='bebop')\nresult = sync(config)\n\nprint(f\"Job {job_id} uploaded and submitted!\")",
+    "crumbs": [
+      "Sync Operations"
+    ]
+  },
+  {
+    "objectID": "agent.html",
+    "href": "agent.html",
+    "title": "Remote Agent Script",
+    "section": "",
+    "text": "This module generates the remote agent script that manages job submission on the HPC cluster.",
+    "crumbs": [
+      "Remote Agent Script"
+    ]
+  },
+  {
+    "objectID": "agent.html#purpose",
+    "href": "agent.html#purpose",
+    "title": "Remote Agent Script",
+    "section": "Purpose",
+    "text": "Purpose\nThe agent script runs on the remote system (bebop) and: - Monitors PBS queue status - Checks against queue limits (70 queued, 30 running) - Submits jobs from waiting/ when slots are available - Moves submitted jobs to tracking directory - Logs all activity",
+    "crumbs": [
+      "Remote Agent Script"
+    ]
+  },
+  {
+    "objectID": "agent.html#design",
+    "href": "agent.html#design",
+    "title": "Remote Agent Script",
+    "section": "Design",
+    "text": "Design\nTrigger mechanisms: 1. Called by completing PBS jobs (self-perpetuating) 2. Called by sync operation (bootstrap/recovery)\nFile-based locking: Uses flock to prevent concurrent execution\nStateless operation: All state is in the filesystem (waiting/, submitted/, completed/)",
+    "crumbs": [
+      "Remote Agent Script"
+    ]
+  },
+  {
+    "objectID": "agent.html#directory-structure",
+    "href": "agent.html#directory-structure",
+    "title": "Remote Agent Script",
+    "section": "Directory Structure",
+    "text": "Directory Structure\n~/chasqui_remote/\n├── waiting/           # Jobs ready to submit\n├── submitted/         # Jobs in PBS queue\n├── completed/         # Finished jobs\n├── logs/\n│   └── agent.log      # Activity log\n├── agent.sh           # This script\n└── agent.lock         # Lock file for flock",
+    "crumbs": [
+      "Remote Agent Script"
+    ]
+  },
+  {
+    "objectID": "agent.html#agent-bash-script",
+    "href": "agent.html#agent-bash-script",
+    "title": "Remote Agent Script",
+    "section": "Agent Bash Script",
+    "text": "Agent Bash Script\nThe core submission engine. This runs on the remote system.",
+    "crumbs": [
+      "Remote Agent Script"
+    ]
+  },
+  {
+    "objectID": "agent.html#agent-script-generator",
+    "href": "agent.html#agent-script-generator",
+    "title": "Remote Agent Script",
+    "section": "Agent Script Generator",
+    "text": "Agent Script Generator\nGenerate the agent script with configurable parameters.\n\nsource\n\ngenerate_agent_script\n\n generate_agent_script (chasqui_remote_dir:str='$HOME/chasqui_remote',\n                        max_queued:int=40, max_running:int=30,\n                        output_path:Optional[str]=None)\n\n*Generate the remote agent bash script.\nArgs: chasqui_remote_dir: Remote chasqui directory (default: “$HOME/chasqui_remote”) max_queued: Maximum queued jobs allowed (default: 40) max_running: Maximum running jobs allowed (default: 30) output_path: If provided, write script to this file\nReturns: Agent script content as string\nExample: &gt;&gt;&gt; script = generate_agent_script( … max_queued=50, … max_running=20 … ) &gt;&gt;&gt; print(script[:100]) #!/bin/bash # Chasqui Agent: Automatic PBS job submission*",
+    "crumbs": [
+      "Remote Agent Script"
+    ]
+  },
+  {
+    "objectID": "agent.html#agent-deployment",
+    "href": "agent.html#agent-deployment",
+    "title": "Remote Agent Script",
+    "section": "Agent Deployment",
+    "text": "Agent Deployment\nDeploy the agent script to the remote system.\n\nsource\n\ndeploy_agent\n\n deploy_agent (ssh_connection,\n               chasqui_remote_dir:str='$HOME/chasqui_remote',\n               max_queued:int=40, max_running:int=30)\n\n*Deploy agent script to remote system.\nArgs: ssh_connection: Active SSHConnection object chasqui_remote_dir: Remote chasqui directory max_queued: Maximum queued jobs allowed max_running: Maximum running jobs allowed\nReturns: Remote path where agent was deployed\nExample: &gt;&gt;&gt; from chasqui.ssh import SSHConnection &gt;&gt;&gt; from chasqui.agent import deploy_agent &gt;&gt;&gt; with SSHConnection(‘bebop’) as ssh: … path = deploy_agent(ssh, max_queued=50) … print(f”Agent deployed to: {path}“)*",
+    "crumbs": [
+      "Remote Agent Script"
+    ]
+  },
+  {
+    "objectID": "agent.html#manual-agent-trigger",
+    "href": "agent.html#manual-agent-trigger",
+    "title": "Remote Agent Script",
+    "section": "Manual Agent Trigger",
+    "text": "Manual Agent Trigger\nManually trigger the agent (for testing or recovery).\n\nsource\n\ntrigger_agent\n\n trigger_agent (ssh_connection, chasqui_remote_dir:str='~/chasqui_remote')\n\n*Manually trigger the agent to submit waiting jobs.\nArgs: ssh_connection: Active SSHConnection object chasqui_remote_dir: Remote chasqui directory\nReturns: Agent log output\nExample: &gt;&gt;&gt; from chasqui.ssh import SSHConnection &gt;&gt;&gt; from chasqui.agent import trigger_agent &gt;&gt;&gt; with SSHConnection(‘bebop’) as ssh: … output = trigger_agent(ssh) … print(output)*",
+    "crumbs": [
+      "Remote Agent Script"
+    ]
+  },
+  {
+    "objectID": "agent.html#agent-log-parser",
+    "href": "agent.html#agent-log-parser",
+    "title": "Remote Agent Script",
+    "section": "Agent Log Parser",
+    "text": "Agent Log Parser\nParse agent logs for sync operations.\n\nsource\n\nparse_agent_log\n\n parse_agent_log (log_content:str)\n\n*Parse agent log entries.\nArgs: log_content: Raw agent.log content\nReturns: List of log entry dictionaries\nExample: &gt;&gt;&gt; log = ’’’ … 2025-11-01T10:00:00Z AGENT_SUBMIT job=abc-123 pbs_id=12345.bebop status=success … 2025-11-01T10:00:01Z AGENT_END submitted=1 … ’’’ &gt;&gt;&gt; entries = parse_agent_log(log) &gt;&gt;&gt; len(entries) 2*",
+    "crumbs": [
+      "Remote Agent Script"
+    ]
+  },
+  {
+    "objectID": "agent.html#tests",
+    "href": "agent.html#tests",
+    "title": "Remote Agent Script",
+    "section": "Tests",
+    "text": "Tests\nVerify script generation and parsing.",
+    "crumbs": [
+      "Remote Agent Script"
+    ]
+  },
+  {
+    "objectID": "agent.html#usage-examples",
+    "href": "agent.html#usage-examples",
+    "title": "Remote Agent Script",
+    "section": "Usage Examples",
+    "text": "Usage Examples\n\nDeploy Agent to Remote System\nfrom chasqui.ssh import SSHConnection\nfrom chasqui.agent import deploy_agent, trigger_agent\n\n# Deploy the agent\nwith SSHConnection('bebop') as ssh:\n    # Deploy with custom limits\n    agent_path = deploy_agent(\n        ssh,\n        max_queued=50,\n        max_running=20\n    )\n    print(f\"Agent deployed to: {agent_path}\")\n    \n    # Trigger it manually (for testing)\n    output = trigger_agent(ssh)\n    print(output)\n\n\nCheck Agent Logs\nfrom chasqui.ssh import SSHConnection\nfrom chasqui.agent import parse_agent_log\n\nwith SSHConnection('bebop') as ssh:\n    # Fetch agent log\n    log_content = ssh.run('cat ~/chasqui_remote/logs/agent.log')\n    \n    # Parse entries\n    entries = parse_agent_log(log_content)\n    \n    # Show recent submissions\n    submissions = [e for e in entries if e['action'] == 'AGENT_SUBMIT']\n    print(f\"Total submissions: {len(submissions)}\")\n    \n    for entry in submissions[-5:]:  # Last 5\n        print(f\"  {entry['timestamp']}: {entry['job']} → {entry['pbs_id']}\")\n\n\nGenerate Script Locally (for inspection)\nfrom chasqui.agent import generate_agent_script\n\n# Generate with custom settings\nscript = generate_agent_script(\n    chasqui_remote_dir=\"~/my_chasqui\",\n    max_queued=80,\n    max_running=40,\n    output_path=\"agent_local.sh\"\n)\n\nprint(\"Agent script saved to: agent_local.sh\")\n\n# Inspect it\nwith open(\"agent_local.sh\") as f:\n    print(f.read()[:500])\n\n\nIntegration with Sync\nThe sync module will use these functions:\ndef sync():\n    with SSHConnection('bebop') as ssh:\n        # 1. Upload jobs\n        # ...\n        \n        # 2. Trigger agent to submit them\n        trigger_agent(ssh)\n        \n        # 3. Parse log to see what was submitted\n        log = ssh.run('cat ~/chasqui_remote/logs/agent.log')\n        entries = parse_agent_log(log)\n        # Update local database based on entries\n\nfrom chasqui.agent import generate_agent_script\n\n# Generate the script\nscript = generate_agent_script(\n    max_queued=40,\n    max_running=30\n)\n\n# Show first 50 lines\nlines = script.split('\\n')\nprint(f\"Total lines: {len(lines)}\\n\")\nprint(\"=== First 50 lines ===\")\nprint('\\n'.join(lines[:50]))\n\n# Check key features\nprint(\"\\n=== Feature Check ===\")\nchecks = {\n    'Has shebang': script.startswith('#!/bin/bash'),\n    'Checks qstat': 'qstat -u' in script,\n    'Submits with qsub': 'qsub' in script,\n    'Uses flock': 'Not in script (called externally)',\n    'Logs activity': 'log_message' in script,\n    'Moves to submitted': 'mv' in script and 'SUBMITTED_DIR' in script,\n}\n\nfor check, result in checks.items():\n    print(f\"✓ {check}: {result}\")\n\nTotal lines: 86\n\n=== First 50 lines ===\n#!/bin/bash\n# Chasqui Agent: Automatic PBS job submission\n# This script submits waiting jobs when PBS queue has capacity\n\nset -e  # Exit on error\n\n# Configuration\nCHASQUI_DIR=\"${CHASQUI_DIR:-$HOME/chasqui_remote}\"\nWAITING_DIR=\"$CHASQUI_DIR/waiting\"\nSUBMITTED_DIR=\"$CHASQUI_DIR/submitted\"\nCOMPLETED_DIR=\"$CHASQUI_DIR/completed\"\nLOG_FILE=\"$CHASQUI_DIR/logs/agent.log\"\n\n# Queue limits (adjust these for your cluster)\nMAX_QUEUED=40\nMAX_RUNNING=30\nMAX_TOTAL=$((MAX_QUEUED + MAX_RUNNING))\n\n# Ensure directories exist\nmkdir -p \"$WAITING_DIR\" \"$SUBMITTED_DIR\" \"$COMPLETED_DIR\" \"$CHASQUI_DIR/logs\"\n\n# Logging function\nlog_message() {\n    echo \"$(date -Iseconds) $1\" &gt;&gt; \"$LOG_FILE\"\n}\n\n# Start of agent run\nlog_message \"AGENT_START\"\n\n# Count current PBS jobs\nQUEUED=$(qstat -u $USER 2&gt;/dev/null | grep \" Q \" | wc -l || echo 0)\nRUNNING=$(qstat -u $USER 2&gt;/dev/null | grep \" R \" | wc -l || echo 0)\nTOTAL=$((QUEUED + RUNNING))\n\nlog_message \"AGENT_CHECK queued=$QUEUED running=$RUNNING total=$TOTAL\"\n\n# Check if we're at capacity\nif [ $TOTAL -ge $MAX_TOTAL ]; then\n    log_message \"AGENT_AT_LIMIT total=$TOTAL max=$MAX_TOTAL\"\n    log_message \"AGENT_END submitted=0\"\n    exit 0\nfi\n\n# Calculate available slots\nSLOTS=$((MAX_TOTAL - TOTAL))\nlog_message \"AGENT_SLOTS available=$SLOTS\"\n\n# Count waiting jobs\nWAITING_COUNT=$(ls \"$WAITING_DIR\"/*.sh 2&gt;/dev/null | wc -l || echo 0)\nif [ $WAITING_COUNT -eq 0 ]; then\n\n=== Feature Check ===\n✓ Has shebang: True\n✓ Checks qstat: True\n✓ Submits with qsub: True\n✓ Uses flock: Not in script (called externally)\n✓ Logs activity: True\n✓ Moves to submitted: True",
+    "crumbs": [
+      "Remote Agent Script"
+    ]
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Chasqui",
+    "section": "",
+    "text": "chasqui helps you manage VASP calculations on remote HPC clusters with PBS queue systems. It handles job submission, monitors queue status, and tracks results—all while respecting strict authentication requirements and queue limits.\nKey features: - Local SQLite database tracks all jobs - Batched SSH operations (2FA-friendly) - Self-perpetuating remote queue (no cron needed) - Automatic overflow management (respects PBS limits) - Simple CLI for everyday tasks",
+    "crumbs": [
+      "Chasqui"
+    ]
+  },
+  {
+    "objectID": "index.html#install",
+    "href": "index.html#install",
+    "title": "Chasqui",
+    "section": "Install",
+    "text": "Install\npip install -e .",
+    "crumbs": [
+      "Chasqui"
+    ]
+  },
+  {
+    "objectID": "index.html#quick-start",
+    "href": "index.html#quick-start",
+    "title": "Chasqui",
+    "section": "Quick Start",
+    "text": "Quick Start\n\nInitialize Database\nfrom chasqui.database import ChasquiDB\n\ndb = ChasquiDB(\"~/.chasqui/jobs.db\")\ndb.init_db()\n\n\nCreate and Submit a Job\n# Create job (assuming VASP inputs in ~/my_vasp_job/)\njob_id = db.create_job(\n    local_path=\"~/my_vasp_job\",\n    vasp_config={\n        \"job_name\": \"my_calculation\",\n        \"cores\": 2,\n        \"walltime\": \"24:00:00\",\n        \"project\": \"YOUR_PROJECT_CODE\",\n        \"vasp_version\": \"vasp_std\",\n        \"remote_work_dir\": \"$HOME/scratch/my_calculation\"\n    }\n)\n\n# Queue for submission\ndb.update_state(job_id, 'QUEUED_LOCAL')\n\n# Sync and submit\nfrom chasqui.sync import sync, SyncConfig\n\nconfig = SyncConfig(remote_host='bebop')\nresult = sync(config)\n\nprint(f\"Uploaded: {result['uploaded']}, Submitted: {result['submitted']}\")",
+    "crumbs": [
+      "Chasqui"
+    ]
+  },
+  {
+    "objectID": "index.html#workflow-states",
+    "href": "index.html#workflow-states",
+    "title": "Chasqui",
+    "section": "Workflow States",
+    "text": "Workflow States\nJobs progress through these states:\nPREPARED → QUEUED_LOCAL → UPLOADED → SUBMITTED → RUNNING → COMPLETED/FAILED",
+    "crumbs": [
+      "Chasqui"
+    ]
+  },
+  {
+    "objectID": "index.html#how-to-use",
+    "href": "index.html#how-to-use",
+    "title": "Chasqui",
+    "section": "How to use",
+    "text": "How to use\nFor detailed usage, see the documentation.",
+    "crumbs": [
+      "Chasqui"
+    ]
+  },
+  {
+    "objectID": "ssh.html",
+    "href": "ssh.html",
+    "title": "SSH Operations",
+    "section": "",
+    "text": "This module provides a clean abstraction for SSH operations to remote HPC systems.",
+    "crumbs": [
+      "SSH Operations"
+    ]
+  },
+  {
+    "objectID": "ssh.html#design-goals",
+    "href": "ssh.html#design-goals",
+    "title": "SSH Operations",
+    "section": "Design Goals",
+    "text": "Design Goals\n2FA-Friendly: All operations in a single connection session to minimize authentication prompts\nContext Manager: Automatic connection cleanup with Python’s with statement\nError Handling: Clear error messages for common SSH failures\nBatched Operations: Support for multiple operations in one connection",
+    "crumbs": [
+      "SSH Operations"
+    ]
+  },
+  {
+    "objectID": "ssh.html#core-operations",
+    "href": "ssh.html#core-operations",
+    "title": "SSH Operations",
+    "section": "Core Operations",
+    "text": "Core Operations\n\nConnect/Disconnect: Manage SSH sessions\nUpload: Transfer job scripts to remote\nDownload: Retrieve results from remote\nExecute: Run commands (trigger agent, check status)\nExists: Check if remote files/directories exist",
+    "crumbs": [
+      "SSH Operations"
+    ]
+  },
+  {
+    "objectID": "ssh.html#security-notes",
+    "href": "ssh.html#security-notes",
+    "title": "SSH Operations",
+    "section": "Security Notes",
+    "text": "Security Notes\nThis module uses SSH key authentication. Passwords are not supported for security reasons. Store your SSH keys in standard locations (~/.ssh/id_rsa or ~/.ssh/id_ed25519).",
+    "crumbs": [
+      "SSH Operations"
+    ]
+  },
+  {
+    "objectID": "ssh.html#architecture",
+    "href": "ssh.html#architecture",
+    "title": "SSH Operations",
+    "section": "Architecture",
+    "text": "Architecture\n[Local] → SSHConnection → [Remote HPC]\n           ├─ upload()\n           ├─ download()\n           ├─ run()\n           └─ exists()\nThe SSHConnection class is designed as a context manager:\nwith SSHConnection('user@hpc.edu') as ssh:\n    ssh.upload('local.sh', 'remote.sh')\n    ssh.run('bash remote.sh')\n    ssh.download('output.txt', 'local_output.txt')\nThis ensures connections are properly closed even if errors occur.\n\nsource\n\nSSHConnection\n\n SSHConnection (host:str, username:Optional[str]=None,\n                key_path:Optional[str]=None, port:int=22,\n                jump_host:Optional[str]=None,\n                jump_username:Optional[str]=None,\n                jump_key_path:Optional[str]=None, jump_port:int=22,\n                use_ssh_config:bool=True)\n\n*Manage SSH connections to remote HPC systems.\nSupports jump host (ProxyJump) configurations commonly used in HPC environments. Can read from ~/.ssh/config or accept explicit jump host parameters.\nExample with SSH config: &gt;&gt;&gt; # ~/.ssh/config already has ProxyJump configured &gt;&gt;&gt; with SSHConnection(‘bebop’) as ssh: … ssh.run(‘hostname’)\nExample with explicit jump host: &gt;&gt;&gt; with SSHConnection( … ‘bebop.lcrc.anl.gov’, … jump_host=‘logins.lcrc.anl.gov’, … username=‘myuser’ … ) as ssh: … ssh.run(‘hostname’)*",
+    "crumbs": [
+      "SSH Operations"
+    ]
+  },
+  {
+    "objectID": "ssh.html#ssh-key-discovery",
+    "href": "ssh.html#ssh-key-discovery",
+    "title": "SSH Operations",
+    "section": "SSH Key Discovery",
+    "text": "SSH Key Discovery\nAutomatically find SSH keys in standard locations if not explicitly provided.",
+    "crumbs": [
+      "SSH Operations"
+    ]
+  },
+  {
+    "objectID": "ssh.html#ssh-config-file-support",
+    "href": "ssh.html#ssh-config-file-support",
+    "title": "SSH Operations",
+    "section": "SSH Config File Support",
+    "text": "SSH Config File Support\nRead configuration from ~/.ssh/config to support jump hosts and other settings.",
+    "crumbs": [
+      "SSH Operations"
+    ]
+  },
+  {
+    "objectID": "ssh.html#connection-management",
+    "href": "ssh.html#connection-management",
+    "title": "SSH Operations",
+    "section": "Connection Management",
+    "text": "Connection Management\nContext manager implementation ensures connections are properly closed.\n\nsource\n\nSSHConnection.__exit__\n\n SSHConnection.__exit__ (exc_type, exc_val, exc_tb)\n\nClose SSH connections.\n\nsource\n\n\nSSHConnection.__enter__\n\n SSHConnection.__enter__ ()\n\nEstablish SSH connection (with jump host if configured).",
+    "crumbs": [
+      "SSH Operations"
+    ]
+  },
+  {
+    "objectID": "ssh.html#command-execution",
+    "href": "ssh.html#command-execution",
+    "title": "SSH Operations",
+    "section": "Command Execution",
+    "text": "Command Execution\nRun commands on the remote system and capture output.\n\nsource\n\nSSHConnection.run\n\n SSHConnection.run (command:str, timeout:int=300)\n\n*Execute a command on the remote system.\nArgs: command: Shell command to execute timeout: Maximum execution time in seconds (default: 5 minutes)\nReturns: Command stdout as string\nRaises: RuntimeError: If command returns non-zero exit code\nExample: &gt;&gt;&gt; with SSHConnection(‘user@hpc.edu’) as ssh: … output = ssh.run(‘ls -la’) … print(output)*",
+    "crumbs": [
+      "SSH Operations"
+    ]
+  },
+  {
+    "objectID": "ssh.html#file-upload",
+    "href": "ssh.html#file-upload",
+    "title": "SSH Operations",
+    "section": "File Upload",
+    "text": "File Upload\nTransfer files from local to remote system.\n\nsource\n\nSSHConnection.upload\n\n SSHConnection.upload (local_path:Union[str,pathlib.Path],\n                       remote_path:str, create_dirs:bool=True)\n\n*Upload a file to the remote system.\nArgs: local_path: Path to local file remote_path: Destination path on remote system create_dirs: Create parent directories if they don’t exist\nExample: &gt;&gt;&gt; with SSHConnection(‘user@hpc.edu’) as ssh: … ssh.upload(‘job.sh’, ‘~/chasqui_remote/waiting/job_001.sh’)*",
+    "crumbs": [
+      "SSH Operations"
+    ]
+  },
+  {
+    "objectID": "ssh.html#file-download",
+    "href": "ssh.html#file-download",
+    "title": "SSH Operations",
+    "section": "File Download",
+    "text": "File Download\nRetrieve files from remote to local system.\n\nsource\n\nSSHConnection.download\n\n SSHConnection.download (remote_path:str,\n                         local_path:Union[str,pathlib.Path],\n                         create_dirs:bool=True)\n\n*Download a file from the remote system.\nArgs: remote_path: Path on remote system local_path: Destination path locally create_dirs: Create parent directories if they don’t exist\nExample: &gt;&gt;&gt; with SSHConnection(‘user@hpc.edu’) as ssh: … ssh.download(‘~/results/output.txt’, ‘./local_output.txt’)*",
+    "crumbs": [
+      "SSH Operations"
+    ]
+  },
+  {
+    "objectID": "ssh.html#remote-file-existence",
+    "href": "ssh.html#remote-file-existence",
+    "title": "SSH Operations",
+    "section": "Remote File Existence",
+    "text": "Remote File Existence\nCheck if files or directories exist on remote system without downloading.\n\nsource\n\nSSHConnection.exists\n\n SSHConnection.exists (remote_path:str)\n\n*Check if a file or directory exists on remote system.\nArgs: remote_path: Path to check on remote system\nReturns: True if path exists, False otherwise\nExample: &gt;&gt;&gt; with SSHConnection(‘user@hpc.edu’) as ssh: … if ssh.exists(‘~/chasqui_remote/agent.sh’): … print(“Agent script found!”)*",
+    "crumbs": [
+      "SSH Operations"
+    ]
+  },
+  {
+    "objectID": "ssh.html#batch-operations",
+    "href": "ssh.html#batch-operations",
+    "title": "SSH Operations",
+    "section": "Batch Operations",
+    "text": "Batch Operations\nHelper for multiple operations in one connection.\n\nsource\n\nSSHConnection.list_dir\n\n SSHConnection.list_dir (remote_path:str)\n\n*List files in a remote directory.\nArgs: remote_path: Directory path on remote system\nReturns: List of filenames\nExample: &gt;&gt;&gt; with SSHConnection(‘user@hpc.edu’) as ssh: … files = ssh.list_dir(‘~/chasqui_remote/waiting’) … print(f”Found {len(files)} jobs waiting”)*",
+    "crumbs": [
+      "SSH Operations"
+    ]
+  },
+  {
+    "objectID": "ssh.html#tests",
+    "href": "ssh.html#tests",
+    "title": "SSH Operations",
+    "section": "Tests",
+    "text": "Tests\nNote: These tests require a live SSH connection and are marked as manual tests. They won’t run during nbdev_test by default.",
+    "crumbs": [
+      "SSH Operations"
+    ]
+  },
+  {
+    "objectID": "ssh.html#usage-examples",
+    "href": "ssh.html#usage-examples",
+    "title": "SSH Operations",
+    "section": "Usage Examples",
+    "text": "Usage Examples\n\nBasic Connection\nfrom chasqui.ssh import SSHConnection\n\nwith SSHConnection('user@hpc.cluster.edu') as ssh:\n    # Upload job script\n    ssh.upload('local_job.sh', '~/chasqui_remote/waiting/job_001.sh')\n    \n    # Trigger agent\n    ssh.run('bash ~/chasqui_remote/agent.sh')\n    \n    # Check status\n    output = ssh.run('qstat -u $USER')\n    print(output)\n\n\nBatch Operations\nwith SSHConnection('user@hpc.cluster.edu') as ssh:\n    # Upload multiple jobs\n    for job_id in job_list:\n        ssh.upload(f'jobs/{job_id}.sh', f'~/chasqui_remote/waiting/{job_id}.sh')\n    \n    # Trigger agent once\n    ssh.run('bash ~/chasqui_remote/agent.sh')\n    \n    # Download all completion flags\n    flags = ssh.list_dir('~/chasqui_remote/completed')\n    for flag in flags:\n        ssh.download(\n            f'~/chasqui_remote/completed/{flag}',\n            f'local_results/{flag}'\n        )\n\n\nError Handling\ntry:\n    with SSHConnection('user@hpc.cluster.edu') as ssh:\n        ssh.upload('job.sh', '~/remote/job.sh')\nexcept FileNotFoundError:\n    print(\"Local file not found\")\nexcept ConnectionError as e:\n    print(f\"SSH connection failed: {e}\")\nexcept RuntimeError as e:\n    print(f\"Remote operation failed: {e}\")",
+    "crumbs": [
+      "SSH Operations"
+    ]
+  },
+  {
+    "objectID": "ssh.html#jump-host-examples",
+    "href": "ssh.html#jump-host-examples",
+    "title": "SSH Operations",
+    "section": "Jump Host Examples",
+    "text": "Jump Host Examples\n\nUsing Existing SSH Config (Recommended)\nIf your ~/.ssh/config already has the ProxyJump configuration:\n# Just use the hostname or alias from your config\nwith SSHConnection('bebop') as ssh:\n    result = ssh.run('hostname')\n    print(result)\n\n# Or use the full hostname\nwith SSHConnection('bebop.lcrc.anl.gov') as ssh:\n    ssh.upload('job.sh', '~/chasqui_remote/waiting/job.sh')\n\n\nExplicit Jump Host Configuration\nIf you want to override or don’t have SSH config:\nwith SSHConnection(\n    host='bebop.lcrc.anl.gov',\n    username='jcgarcia',\n    jump_host='logins.lcrc.anl.gov',\n    key_path='~/.ssh/id_rsa'\n) as ssh:\n    ssh.run('qstat')\n\n\nWithout SSH Config (Manual)\nDisable SSH config reading entirely:\nwith SSHConnection(\n    host='bebop.lcrc.anl.gov',\n    username='jcgarcia',\n    jump_host='logins.lcrc.anl.gov',\n    use_ssh_config=False,\n    key_path='~/.ssh/id_rsa'\n) as ssh:\n    ssh.run('hostname')",
+    "crumbs": [
+      "SSH Operations"
+    ]
+  }
+]
