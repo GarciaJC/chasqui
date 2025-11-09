@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     uploaded_at TEXT,
     submitted_at TEXT,
     completed_at TEXT,
+    downloaded_at TEXT,  
     
     -- Local information
     local_path TEXT NOT NULL,
