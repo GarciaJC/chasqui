@@ -17,6 +17,7 @@ from .database import ChasquiDB
 from .ssh import SSHConnection
 from .templates import generate_pbs_script_from_job
 from .agent import deploy_agent, trigger_agent, parse_agent_log
+from .download import download_completed_jobs
 
 from fastcore.basics import patch
 
@@ -240,6 +241,7 @@ def sync(
         'submitted': 0,
         'completed': 0,
         'failed': 0,
+        'downloaded': 0,
         'timestamp': datetime.now().isoformat()
     }
     
@@ -366,15 +368,30 @@ def sync(
         
         # 5. DOWNLOAD RESULTS (optional)
         if config.download_results:
-            # TODO: Implement result download
-            pass
+            download_stats = download_completed_jobs(
+                db,
+                ssh,
+                file_list=None,  # Use defaults
+                limit=None,  # Download all
+                update_db=True  # Update downloaded_at timestamps
+            )
+            
+            stats['downloaded'] = download_stats['total_downloaded']
+            
+            if download_stats['jobs_processed'] > 0:
+                print(f"\n✓ Downloaded {download_stats['total_downloaded']} files "
+                      f"from {download_stats['jobs_processed']} jobs")
+                
+                if download_stats['total_skipped'] > 0:
+                    print(f"  (skipped {download_stats['total_skipped']} missing files)")
     
     # Log sync operation
     db.log_sync(
         uploaded=stats['uploaded'],
         submitted=stats['submitted'],
         completed=stats['completed'],
-        failed=stats['failed']
+        failed=stats['failed'],
+        downloaded=stats.get('downloaded', 0)
     )
     
     return stats

@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS sync_log (
     submitted INTEGER DEFAULT 0,
     completed INTEGER DEFAULT 0,
     failed INTEGER DEFAULT 0,
+    downloaded INTEGER DEFAULT 0,
     details TEXT  -- JSON blob with additional info
 );
 
@@ -234,6 +235,7 @@ def log_sync(
     submitted: int = 0,
     completed: int = 0,
     failed: int = 0,
+    downloaded: int = 0,  # ADD THIS PARAMETER
     details: Optional[Dict[str, Any]] = None
 ):
     """
@@ -244,6 +246,7 @@ def log_sync(
         submitted: Number of jobs submitted to PBS
         completed: Number of jobs completed
         failed: Number of jobs failed
+        downloaded: Number of files downloaded  # ADD THIS LINE
         details: Additional information (optional)
     """
     now = datetime.now().isoformat()
@@ -251,14 +254,15 @@ def log_sync(
     with self._connect() as conn:
         conn.execute("""
             INSERT INTO sync_log 
-            (timestamp, uploaded, submitted, completed, failed, details)
-            VALUES (?, ?, ?, ?, ?, ?)
+            (timestamp, uploaded, submitted, completed, failed, downloaded, details)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (
             now,
             uploaded,
             submitted,
             completed,
             failed,
+            downloaded,  # ADD THIS VALUE
             json.dumps(details) if details else None
         ))
 
